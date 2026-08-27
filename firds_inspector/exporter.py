@@ -78,34 +78,49 @@ class ReportExporter:
 
     @staticmethod
     def export_diff_markdown(diff: DiffResult, output_path: Union[str, Path]):
-        """Exports a DiffResult to Markdown format."""
+        """Exports a single or batch DiffResult to Markdown format."""
+        ReportExporter.export_batch_diff_markdown([diff], output_path)
+
+    @staticmethod
+    def export_batch_diff_markdown(diffs: List[DiffResult], output_path: Union[str, Path]):
+        """Exports multiple DiffResult objects into a combined Markdown report."""
         lines = [
-            f"# FIRDS Reconciliation Report: {diff.isin}",
+            "# FIRDS Batch Reconciliation Report",
             "",
-            f"- **Source ({diff.source_name})**: {'Found' if diff.source_instrument else 'MISSING'}",
-            f"- **Target ({diff.target_name})**: {'Found' if diff.target_instrument else 'MISSING'}",
-            f"- **Status**: {'DISCREPANCIES FOUND' if diff.has_differences else 'IDENTICAL'}",
+            f"**Total Instruments Analyzed**: {len(diffs)}",
             "",
-            "## Field Level Comparison",
-            "",
-            f"| Field | {diff.source_name} | {diff.target_name} | Match | Notes |",
-            "| --- | --- | --- | --- | --- |",
         ]
 
-        for fd in diff.field_diffs:
-            match_icon = "MATCH" if fd.is_match else "DIFF"
-            lines.append(f"| {fd.field_name} | {fd.source_value} | {fd.target_value} | {match_icon} | {fd.description or ''} |")
-
-        if diff.diagnostics:
+        for diff in diffs:
             lines.extend([
+                f"## Instrument: {diff.isin}",
                 "",
-                "## Ingestion Diagnostics & Failure Causes",
+                f"- **Source ({diff.source_name})**: {'Found' if diff.source_instrument else 'MISSING'}",
+                f"- **Target ({diff.target_name})**: {'Found' if diff.target_instrument else 'MISSING'}",
+                f"- **Status**: {'DISCREPANCIES FOUND' if diff.has_differences else 'IDENTICAL'}",
                 "",
+                "### Field Level Comparison",
+                "",
+                f"| Field | {diff.source_name} | {diff.target_name} | Match | Notes |",
+                "| --- | --- | --- | --- | --- |",
             ])
-            for diag in diff.diagnostics:
-                lines.append(f"- {diag}")
+
+            for fd in diff.field_diffs:
+                match_icon = "MATCH" if fd.is_match else "DIFF"
+                lines.append(f"| {fd.field_name} | {fd.source_value} | {fd.target_value} | {match_icon} | {fd.description or ''} |")
+
+            if diff.diagnostics:
+                lines.extend([
+                    "",
+                    "#### Ingestion Diagnostics",
+                    "",
+                ])
+                for diag in diff.diagnostics:
+                    lines.append(f"- {diag}")
+
+            lines.append("\n---\n")
 
         with open(output_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
-        logger.info(f"Exported diff report to Markdown: {output_path}")
+        logger.info(f"Exported batch diff report to Markdown: {output_path}")

@@ -294,6 +294,7 @@ def main(args_list: Optional[List[str]] = None):
             console.print("[bold red]Please provide at least one --isin or --file to compare.[/bold red]")
             return
 
+        all_diffs: List[DiffResult] = []
         for isin_val in target_list:
             inst_eu: Optional[FinancialInstrument] = None
             inst_uk: Optional[FinancialInstrument] = None
@@ -314,8 +315,7 @@ def main(args_list: Optional[List[str]] = None):
                     target_label="Database (Ingested)",
                 )
                 display_diff_result(diff)
-                if args.export_md:
-                    ReportExporter.export_diff_markdown(diff, args.export_md)
+                all_diffs.append(diff)
             else:
                 uk_found = search_files_for_instruments(uk_files, "UK", target_isins={isin_val})
                 if uk_found:
@@ -328,8 +328,11 @@ def main(args_list: Optional[List[str]] = None):
                     target_label="FCA (UK)",
                 )
                 display_diff_result(diff)
-                if args.export_md:
-                    ReportExporter.export_diff_markdown(diff, args.export_md)
+                all_diffs.append(diff)
+
+        if args.export_md and all_diffs:
+            ReportExporter.export_batch_diff_markdown(all_diffs, args.export_md)
+            console.print(f"[green]Exported batch diff report to {args.export_md}[/green]")
 
 
 if __name__ == "__main__":
