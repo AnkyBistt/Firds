@@ -62,7 +62,7 @@ class DltinsXmlParser:
                 general_elem = child
             elif tag == "Issr":
                 issuer_lei = child.text.strip() if child.text else None
-            elif tag == "TradgVnAttrbts":
+            elif tag in ("TradgVnAttrbts", "TradgVnRltdAttrbts"):
                 mic = _get_child_text(child, "Id")
                 if mic:
                     issuer_req_text = _get_child_text(child, "IssrReq")
@@ -85,6 +85,11 @@ class DltinsXmlParser:
             elif tag == "TechAttrbts":
                 rca = _get_child_text(child, "RlvntCmptntAuthrty")
                 pbl_dt = _get_child_text(child, "PblctnDt")
+                if not pbl_dt:
+                    # In v3, PblctnPrd can contain Dt or FrDt/ToDt
+                    pbl_prd = _get_all_children_by_local_tag(child, "PblctnPrd")
+                    if pbl_prd:
+                        pbl_dt = _get_child_text(pbl_prd[0], "Dt") or _get_child_text(pbl_prd[0], "FrDt")
                 rc_dt = _get_child_text(child, "RcrptDt")
                 tech_attrs = TechnicalAttributes(
                     relevant_competent_authority=rca,
@@ -101,7 +106,7 @@ class DltinsXmlParser:
 
         full_nm = _get_child_text(general_elem, "FullNm")
         shrt_nm = _get_child_text(general_elem, "ShrtNm")
-        cfi = _get_child_text(general_elem, "ClssfctnFinInstrm")
+        cfi = _get_child_text(general_elem, "ClssfctnFinInstrm") or _get_child_text(general_elem, "ClssfctnTp")
         cfi_info = decode_cfi(cfi) if cfi else None
         cfi_desc = cfi_info["summary"] if cfi_info else None
         ccy = _get_child_text(general_elem, "NtnlCcy")
@@ -175,12 +180,16 @@ class DltinsXmlParser:
         # Event type 'end' is triggered when an element's closing tag is read
         context = ET.iterparse(xml_source, events=("end",))
         
-        # Tags that define individual records
+        # Tags that define individual records (supports auth.036.001.02 and auth.036.001.03)
         record_tags = {
             "NewRecord": "NEWT",
+            "NewRcrd": "NEWT",
             "ModfdRecord": "MODI",
+            "ModfdRcrd": "MODI",
             "CancRecord": "CANC",
+            "CancRcrd": "CANC",
             "TermntdRecord": "TERMN",
+            "TermntdRcrd": "TERMN",
             "FinInstrm": "RECORD",
         }
 
