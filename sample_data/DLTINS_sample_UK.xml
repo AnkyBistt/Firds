@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BizData xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.01">
+  <Hdr>
+    <Fr>
+      <OrgId>
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>FCA</Id>
+            </Othr>
+          </OrgId>
+        </Id>
+      </OrgId>
+    </Fr>
+    <CreDt>2024-01-15T06:00:00Z</CreDt>
+  </Hdr>
+  <Pyld>
+    <Document xmlns="urn:iso:std:iso:20022:tech:xsd:auth.036.001.02">
+      <FinInstrmRptgRefDataDltaRpt>
+        <!-- Instrument 1: Apple Inc (US0378331005) - Note slight difference in short name and extra UK venue AQXE -->
+        <FinInstrm>
+          <NewRecord>
+            <FinInstrmGnlAttrbts>
+              <Id>US0378331005</Id>
+              <FullNm>APPLE INC COMMON STOCK</FullNm>
+              <ShrtNm>APPLE/ORD USD0.00001</ShrtNm>
+              <ClssfctnFinInstrm>ESVUFR</ClssfctnFinInstrm>
+              <CmmdtyDerivInd>false</CmmdtyDerivInd>
+              <NtnlCcy>USD</NtnlCcy>
+            </FinInstrmGnlAttrbts>
+            <Issr>HW6821973GWENKNIQL71</Issr>
+            <TradgVnAttrbts>
+              <Id>AQXE</Id>
+              <IssrReq>false</IssrReq>
+              <FrstTradDt>2015-03-20T08:00:00Z</FrstTradDt>
+            </TradgVnAttrbts>
+            <TradgVnAttrbts>
+              <Id>XLON</Id>
+              <IssrReq>false</IssrReq>
+              <FrstTradDt>2010-05-11T08:00:00Z</FrstTradDt>
+            </TradgVnAttrbts>
+            <TechAttrbts>
+              <RlvntCmptntAuthrty>GB</RlvntCmptntAuthrty>
+              <PblctnDt>2024-01-15</PblctnDt>
+            </TechAttrbts>
+          </NewRecord>
+        </FinInstrm>
+
+        <!-- Instrument 2: BAE Systems PLC (GB0002634946) - Fully matching UK record -->
+        <FinInstrm>
+          <NewRecord>
+            <FinInstrmGnlAttrbts>
+              <Id>GB0002634946</Id>
+              <FullNm>BAE SYSTEMS PLC ORDINARY 2.5P</FullNm>
+              <ShrtNm>BAE SYS/ORD 2.5P</ShrtNm>
+              <ClssfctnFinInstrm>ESVUFR</ClssfctnFinInstrm>
+              <CmmdtyDerivInd>false</CmmdtyDerivInd>
+              <NtnlCcy>GBP</NtnlCcy>
+            </FinInstrmGnlAttrbts>
+            <Issr>213800CWSC5K5UZ5Q984</Issr>
+            <TradgVnAttrbts>
+              <Id>XLON</Id>
+              <IssrReq>true</IssrReq>
+              <AdmssnApprvlDtByIssr>1981-02-18T00:00:00Z</AdmssnApprvlDtByIssr>
+              <FrstTradDt>1981-02-18T08:00:00Z</FrstTradDt>
+            </TradgVnAttrbts>
+            <TechAttrbts>
+              <RlvntCmptntAuthrty>GB</RlvntCmptntAuthrty>
+              <PblctnDt>2024-01-15</PblctnDt>
+            </TechAttrbts>
+          </NewRecord>
+        </FinInstrm>
+      </FinInstrmRptgRefDataDltaRpt>
+    </Document>
+  </Pyld>
+</BizData>
