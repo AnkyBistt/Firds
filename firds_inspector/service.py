@@ -35,19 +35,19 @@ class FirdsService:
         region = region.upper()
         resolved_files: List[Tuple[Path, str]] = []
 
-        # 1. Custom directory / bundled sample_data check
-        target_dir = Path(custom_dir) if custom_dir else self.data_dir
-        if target_dir and target_dir.exists():
-            date_clean = date_str.replace("-", "")
-            files = list(target_dir.glob(f"*{date_clean}*")) or list(target_dir.glob("*.zip")) + list(target_dir.glob("*.xml"))
-            for f in files:
-                if f.suffix.lower() in (".zip", ".xml", ".gz"):
-                    reg = "UK" if "uk" in f.name.lower() else "EU"
-                    if region in ("ALL", reg):
-                        resolved_files.append((f, reg))
-
-        if resolved_files:
-            return resolved_files
+        # 1. Custom directory check (only if explicitly specified)
+        if custom_dir:
+            target_dir = Path(custom_dir)
+            if target_dir.exists():
+                date_clean = date_str.replace("-", "")
+                files = list(target_dir.glob(f"*{date_clean}*")) or list(target_dir.glob("*.zip")) + list(target_dir.glob("*.xml"))
+                for f in files:
+                    if f.suffix.lower() in (".zip", ".xml", ".gz"):
+                        reg = "UK" if "uk" in f.name.lower() else "EU"
+                        if region in ("ALL", reg):
+                            resolved_files.append((f, reg))
+                if resolved_files:
+                    return resolved_files
 
         # 2. ESMA (EU) Live / Cached Lookup
         if region in ("EU", "ALL"):

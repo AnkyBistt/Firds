@@ -13,5 +13,3 @@ services:
         value: /tmp/firds_cache
       - key: ESMA_SOLR_URL
         value: https://registers.esma.europa.eu/solr/esma_registers_firds_files/select
-      - key: FIRDS_DATA_DIR
-        value: sample_data
