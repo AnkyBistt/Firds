@@ -1,144 +1,179 @@
-# FIRDS DLTINS Reference Data Inspector & Reconciler
+# FIRDS Reference Data Web API & DLTINS Inspector
 
-A high-performance Python console application & CLI tool to inspect, search, and reconcile **ESMA (EU)** and **FCA (UK)** Financial Instruments Reference Data System (**FIRDS**) DLTINS (`auth.036.001.02` & `auth.036.001.03`) XML files.
+A production-ready **FastAPI Web Service** and CLI tool to query, inspect, and reconcile **ESMA (EU)** and **FCA (UK)** Financial Instruments Reference Data System (**FIRDS**) DLTINS (`auth.036.001.02` & `auth.036.001.03`) XML reference data.
 
-Designed specifically to diagnose and troubleshoot **why certain ISINs get missed or dropped during daily delta ingestion** across different environment databases.
+Configured for **Render's free tier** cloud deployment and local development.
 
 ---
 
-## ⚡ Quick Start: How to Run the App
+## 🚀 Features
 
-### 1. Prerequisites & Setup
-Ensure you have Python 3.8+ installed.
+- ⚡ **Production-Ready FastAPI Web API**: High-performance asynchronous REST API with automatic interactive OpenAPI / Swagger documentation (`/docs`).
+- 🌐 **Live Regulatory Ingestion**: Queries the official ESMA Solr API on demand, downloads, and streams reference data for any given publication date.
+- 💾 **Low-Memory Streaming Parser**: Zero-memory `iterparse` engine designed specifically for cloud environments with limited RAM (e.g. Render 512MB free tier), streaming multi-gigabyte XML and `.zip` archives directly without disk inflation.
+- 🛡️ **Comprehensive Validation & Error Handling**: Returns clean, typed JSON responses and standard HTTP status codes (`200 OK`, `400 Bad Request`, `404 Not Found`, `502 Bad Gateway`).
+- 🏷️ **ISO 10962 CFI Code Decoder**: Automatically decodes 6-letter CFI codes (e.g. `DCVGFB`, `ESVUFR`, `DBFTFR`) into descriptive asset classifications.
+- ⚖️ **Cross-Region Diff & Diagnostics**: Compares how instruments are reported in ESMA vs FCA and diagnoses ingestion failure root causes.
+- ☁️ **Render Free Tier Ready**: Fully configured with `render.yaml`, `$PORT` binding on `0.0.0.0`, ephemeral cache directory `/tmp/firds_cache`, and health check endpoint `/health`.
 
+---
+
+## 🛠️ API Endpoints
+
+### 1. `GET /search`
+Searches for instrument reference data by ISIN, publication date, and region.
+
+* **Query Parameters:**
+  - `isin` *(required)*: 12-character ISO 6166 ISIN (e.g. `AT0000A0SL91`, `US0378331005`)
+  - `date` *(required)*: Publication Date in `YYYY-MM-DD` format (e.g. `2024-01-15`)
+  - `region` *(optional, default: `EU`)*: Regulatory region (`EU`, `UK`, or `ALL`)
+  - `dltins_dir` *(optional)*: Local custom directory containing DLTINS files (e.g. `sample_data`)
+
+* **Example Request:**
+  ```http
+  GET /search?isin=AT0000A0SL91&date=2024-01-15&region=EU
+  ```
+
+* **Example 200 OK JSON Response:**
+  ```json
+  {
+    "success": true,
+    "query_isin": "AT0000A0SL91",
+    "date": "2024-01-15",
+    "region": "EU",
+    "count": 1,
+    "instruments": [
+      {
+        "isin": "AT0000A0SL91",
+        "region": "EU",
+        "record_type": "MODI",
+        "source_file": "DLTINS_20240115_01of01.zip::DLTINS_20240115_01of01.xml",
+        "general": {
+          "isin": "AT0000A0SL91",
+          "full_name": "HYPOBK 4 01/12/24 BOND",
+          "short_name": "HYP WBBK/SU CV BD 20240112 3 GTD",
+          "cfi_code": "DCVGFB",
+          "cfi_description": "Debt Instruments -> Convertible Bonds (Interest: Variable/Floating rate, Guarantee: Guaranteed, Redemption: Fixed maturity, Form: Bearer)",
+          "currency": "EUR",
+          "commodity_derivative_indicator": false,
+          "issuer_lei": "5299003LP3FEIX2HYD09",
+          "custom_attributes": {}
+        },
+        "trading_venues": [
+          {
+            "mic": "BTFE",
+            "issuer_request": false,
+            "first_trade_date": "2021-09-09T15:07:31.346Z",
+            "termination_date": "9999-12-31T23:59:59.999Z",
+            "admission_approval_date": null,
+            "request_for_admission_date": null,
+            "custom_attributes": {}
+          }
+        ],
+        "technical": {
+          "relevant_competent_authority": "AT",
+          "publication_date": "2024-01-15",
+          "record_date": null
+        }
+      }
+    ]
+  }
+  ```
+
+---
+
+### 2. `GET /compare`
+Compares an ISIN side-by-side between **ESMA (EU)** and **FCA (UK)** feeds and diagnoses ingestion root-cause issues.
+
+* **Example Request:**
+  ```http
+  GET /compare?isin=US0378331005&date=2024-01-15&dltins_dir=sample_data
+  ```
+
+---
+
+### 3. `GET /health`
+Health check endpoint for Render and uptime monitoring.
+
+* **Example Response:**
+  ```json
+  {
+    "status": "ok",
+    "service": "firds-reference-data-api",
+    "version": "1.0.0",
+    "cache_directory": "/tmp/firds_cache/eu"
+  }
+  ```
+
+---
+
+### 4. `GET /docs`
+Interactive Swagger UI allowing you to test all endpoints directly in your browser.
+
+---
+
+## 💻 Local Development & Testing
+
+### 1. Install Dependencies
 ```bash
-# Clone the repository (if not already cloned)
-git clone https://github.com/AnkyBistt/Firds.git
-cd Firds
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
----
-
-### 2. Run Modes
-
-#### 🧙 Mode A: Interactive Guided Wizard (Recommended)
-Launch the step-by-step interactive wizard without memorizing flags:
+### 2. Run the Web Server Locally
 ```bash
-python firds_tool.py --interactive
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
-*(Or simply run `python firds_tool.py` without arguments)*
+Open your browser at **`http://localhost:8000/docs`** to test the API.
 
----
-
-#### 🌐 Mode B: Query Live Data from ESMA Registers API
-To query reference data directly from the live ESMA Solr feed for any publication date:
-```bash
-# Query an ISIN live from ESMA (downloads and caches DLTINS zip automatically)
-python firds_tool.py --isin AT0000A0SL91 --region eu --date 2024-01-15
-
-# Search live debt instruments published on that date
-python firds_tool.py --cfi-filter DC --region eu --date 2024-01-15
-
-# Search live equities published on that date
-python firds_tool.py --cfi-filter ES --region eu --date 2024-01-15
-```
-
----
-
-#### 📁 Mode C: Query Against Local Downloaded DLTINS Files
-If your daily ingestion service downloads DLTINS files into a local folder:
-```bash
-# Point to your local DLTINS folder
-python firds_tool.py --isin US0378331005 --region eu --dltins-dir "C:\path\to\dltins_folder"
-
-# Test with included sample files
-python firds_tool.py --isin US0378331005 --region eu --date 2024-01-15 --dltins-dir sample_data
-```
-
----
-
-#### ⚖️ Mode D: Cross-Region Reconciliation (EU vs UK Diff)
-Compare how an ISIN is reported in ESMA (EU) versus FCA (UK) files to spot discrepancies and root causes:
-```bash
-python firds_tool.py --isin US0378331005 --compare --date 2024-01-15 --dltins-dir sample_data
-```
-
----
-
-#### 🗄️ Mode E: Compare DLTINS Source vs Ingested Database
-Verify whether an ISIN in the raw DLTINS file matches what was inserted into your local database:
-```bash
-python firds_tool.py --isin US0378331005 --sqlite-db "C:\path\to\environment.db" --date 2024-01-15
-```
-
----
-
-#### 📋 Mode F: Batch Reconcile Multiple Missing ISINs
-Pass a `.txt` file containing ISINs (one per line) to verify a list of missing instruments:
-```bash
-python firds_tool.py --file missing_isins.txt --region eu --date 2024-01-15
-```
-
----
-
-#### 📤 Mode G: Export Results
-Export parsed instrument details or diff reports:
-```bash
-# Export search results to JSON
-python firds_tool.py --isin US0378331005 --region eu --export-json result.json --dltins-dir sample_data
-
-# Export instruments list to CSV
-python firds_tool.py --cfi-filter ES --region eu --export-csv equities.csv --dltins-dir sample_data
-
-# Export Diff Reconciliation Report to Markdown
-python firds_tool.py --isin US0378331005 --compare --export-md diff_report.md --dltins-dir sample_data
-```
-
----
-
-## 🛠️ CLI Arguments Reference
-
-| Argument | Description | Example |
-| --- | --- | --- |
-| `--interactive` | Launch interactive step-by-step console wizard. | `python firds_tool.py --interactive` |
-| `--isin <ISIN>` | Single 12-character ISIN to lookup. | `--isin US0378331005` |
-| `--region <EU\|UK\|ALL>` | Target regulatory region (Default: `EU`). | `--region EU` |
-| `--date <YYYY-MM-DD>` | Publication Date (Default: Today). | `--date 2024-01-15` |
-| `--compare` | Compare ISIN between EU and UK DLTINS files. | `--compare` |
-| `--dltins-dir <path>` | Path to local directory with `.zip` or `.xml` files. | `--dltins-dir ./sample_data` |
-| `--sqlite-db <path>` | Path to SQLite DB to compare raw file vs ingested DB. | `--sqlite-db ./app.db` |
-| `--file <path>` | Text file containing list of ISINs for batch check. | `--file ./isins.txt` |
-| `--cfi-filter <prefix>` | Filter instruments by ISO 10962 CFI code prefix. | `--cfi-filter DB` |
-| `--mic-filter <MIC>` | Filter instruments by Trading Venue MIC. | `--mic-filter XNAS` |
-| `--export-json <path>` | Export output to structured JSON. | `--export-json out.json` |
-| `--export-csv <path>` | Export output to CSV. | `--export-csv out.csv` |
-| `--export-md <path>` | Export reconciliation report to Markdown. | `--export-md out.md` |
-| `-v`, `--verbose` | Enable verbose debug logs. | `-v` |
-
----
-
-## 🔍 Ingestion Failure Root-Cause Diagnostics
-
-When comparing records or inspecting problematic instruments, the tool automatically runs root-cause analysis:
-
-| Diagnostic Flag | Root Cause | Impact on Database Ingestion |
-| --- | --- | --- |
-| `[WARNING] Record type is 'CANC'` | Record is an explicit cancellation in DLTINS delta. | Ingestion pipeline may purge or skip the record. |
-| `[WARNING] Record type is 'TERMN'` | Record is a termination event. | Instrument may be marked inactive. |
-| `[CAUTION] Issuer LEI is missing` | Issuer tag `<Issr>` is absent in XML. | DB `NOT NULL` or foreign key constraints cause insertion rollback. |
-| `[CAUTION] CFI code is missing` | `<ClssfctnFinInstrm>` tag is missing. | Classification-based ingestion pipeline rejects row. |
-| `[NOTE] Expired termination date` | `<TermntnDt>` is earlier than report date. | Filtered out by active instrument queries. |
-| `[INFO] Multi-listed venue` | Instrument has multiple `<TradgVnAttrbts>` tags. | Venue mapping conflicts if DB only allows 1 venue per ISIN. |
-
----
-
-## 🧪 Running Automated Tests
-
-Run the unit test suite covering XML streaming, CFI decoding, and reconciliation diffs:
-
+### 3. Run Automated Tests
 ```bash
 python -m unittest discover -s tests
 ```
+
+---
+
+## ☁️ Deployment on Render (Free Tier)
+
+### Method A: Deploy via Render Blueprint (Recommended)
+1. Push your repository to GitHub: `https://github.com/AnkyBistt/Firds`
+2. Log in to [Render Dashboard](https://dashboard.render.com/).
+3. Click **New +** -> **Blueprint**.
+4. Connect your GitHub repository `Firds`.
+5. Render will automatically read `render.yaml` and configure the Web Service with the correct build and start commands.
+
+### Method B: Manual Web Service Setup on Render
+1. Click **New +** -> **Web Service**.
+2. Connect your GitHub repository.
+3. Configure the following fields:
+   - **Name**: `firds-reference-data-api`
+   - **Runtime**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - **Plan**: `Free`
+4. Under **Environment Variables**, add:
+   - `PYTHON_VERSION`: `3.12.4`
+   - `FIRDS_CACHE_DIR`: `/tmp/firds_cache`
+   - `ESMA_SOLR_URL`: `https://registers.esma.europa.eu/solr/esma_registers_firds_files/select`
+   - `FIRDS_DATA_DIR`: `sample_data`
+5. Click **Deploy Web Service**.
+
+---
+
+## ⚙️ Environment Variables Reference
+
+| Variable | Default Value | Description |
+| --- | --- | --- |
+| `PORT` | `8000` | Port for Uvicorn server (automatically set by Render). |
+| `HOST` | `0.0.0.0` | Host IP binding. |
+| `FIRDS_CACHE_DIR` | `/tmp/firds_cache` | Path for downloaded DLTINS files (uses ephemeral disk on Render). |
+| `ESMA_SOLR_URL` | `https://registers.esma.europa.eu/solr/...` | Base Solr endpoint for ESMA FIRDS registers. |
+| `ESMA_TIMEOUT_SECONDS`| `30` | Timeout in seconds for ESMA API downloads. |
+| `FIRDS_DATA_DIR` | `sample_data` | Default directory for bundled/offline DLTINS files. |
+
+---
+
+## ⚠️ Render Free Tier Notes & Limitations
+
+- **Cold Starts**: Render's free tier spins down web services after 15 minutes of inactivity. The first request after spindown may take 30–50 seconds while the container boots up. Subsequent requests respond immediately.
+- **512MB RAM Constraint**: Our streaming `iterparse` engine maintains a constant memory footprint (~25MB–40MB) while processing 500MB+ XML archives, staying well within Render's 512MB limit.
+- **Ephemeral Storage**: Downloaded DLTINS zip files in `/tmp/firds_cache` are cached during the container instance lifecycle. If the instance restarts, it will redownload files from ESMA on demand.

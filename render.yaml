@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: firds-reference-data-api
+    runtime: python
+    plan: free
+    region: frankfurt  # or oregon / ohio
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: FIRDS_CACHE_DIR
+        value: /tmp/firds_cache
+      - key: ESMA_SOLR_URL
+        value: https://registers.esma.europa.eu/solr/esma_registers_firds_files/select
+      - key: FIRDS_DATA_DIR
+        value: sample_data
