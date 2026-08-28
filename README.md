@@ -20,18 +20,36 @@ Configured for **Render's free tier** cloud deployment and local development.
 
 ## 🛠️ API Endpoints
 
-### 1. `GET /search`
-Searches for instrument reference data by ISIN, publication date, and region.
+### 1. `GET /lookup` (Direct ISIN Lookup - No Date Required)
+Directly queries the live **ESMA Master FIRDS Database** (`esma_registers_firds` Solr core) by ISIN without needing a publication date. Returns all active and historic European trading venue listings, issuer LEI, decoded CFI classification, and instrument lifecycle status.
 
 * **Query Parameters:**
   - `isin` *(required)*: 12-character ISO 6166 ISIN (e.g. `AT0000A0SL91`, `US0378331005`)
-  - `date` *(required)*: Publication Date in `YYYY-MM-DD` format (e.g. `2024-01-15`)
+  - `region` *(optional, default: `EU`)*: Regulatory region (`EU` or `UK`)
+
+* **Example Requests:**
+  ```http
+  GET /lookup?isin=AT0000A0SL91
+  GET /isin/AT0000A0SL91
+  ```
+
+---
+
+### 2. `GET /search`
+Searches for instrument reference data by ISIN, optional publication date, and region.
+- If `date` is provided: Streams the specific day's DLTINS XML file feed.
+- If `date` is omitted: Queries the live master FIRDS register.
+
+* **Query Parameters:**
+  - `isin` *(required)*: 12-character ISO 6166 ISIN (e.g. `AT0000A0SL91`, `US0378331005`)
+  - `date` *(optional)*: Publication Date in `YYYY-MM-DD` format (e.g. `2024-01-15`)
   - `region` *(optional, default: `EU`)*: Regulatory region (`EU`, `UK`, or `ALL`)
   - `dltins_dir` *(optional)*: Local custom directory containing DLTINS files (e.g. `sample_data`)
 
 * **Example Request:**
   ```http
   GET /search?isin=AT0000A0SL91&date=2024-01-15&region=EU
+  GET /search?isin=AT0000A0SL91
   ```
 
 * **Example 200 OK JSON Response:**

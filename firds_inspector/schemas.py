@@ -47,8 +47,17 @@ class FinancialInstrumentSchema(BaseModel):
 class SearchResponse(BaseModel):
     success: bool = Field(True, example=True)
     query_isin: str = Field(..., example="US0378331005")
-    date: str = Field(..., example="2024-01-15")
+    date: Optional[str] = Field(None, example="2024-01-15")
     region: str = Field(..., example="EU")
+    count: int = Field(..., example=1)
+    instruments: List[FinancialInstrumentSchema]
+
+
+class LookupResponse(BaseModel):
+    success: bool = Field(True, example=True)
+    query_isin: str = Field(..., example="AT0000A0SL91")
+    region: str = Field("EU", example="EU")
+    source: str = Field("ESMA FIRDS Master Register", example="ESMA FIRDS Master Register")
     count: int = Field(..., example=1)
     instruments: List[FinancialInstrumentSchema]
 

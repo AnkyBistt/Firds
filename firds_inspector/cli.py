@@ -181,7 +181,7 @@ def main(args_list: Optional[List[str]] = None):
     parser.add_argument("--isin", type=str, help="ISIN to inspect (e.g. US0378331005)")
     parser.add_argument("--file", type=str, help="Batch file with list of ISINs (one per line)")
     parser.add_argument("--region", type=str, choices=["EU", "UK", "ALL", "eu", "uk", "all"], default="EU", help="Target region (EU, UK, or ALL)")
-    parser.add_argument("--date", type=str, default=date.today().isoformat(), help="Publication Date in YYYY-MM-DD format (default: today)")
+    parser.add_argument("--date", type=str, default=None, help="Publication Date in YYYY-MM-DD format (optional: if omitted, master register is queried)")
     parser.add_argument("--dltins-dir", type=str, help="Path to local directory containing DLTINS zip/xml files")
     parser.add_argument("--compare", action="store_true", help="Compare ISIN between EU and UK DLTINS files")
     parser.add_argument("--sqlite-db", type=str, help="Path to SQLite database to compare DLTINS record against ingested DB table")
@@ -208,7 +208,7 @@ def main(args_list: Optional[List[str]] = None):
         args.export_json = wizard_config.get("export_json")
 
     region = args.region.upper()
-    target_date = args.date.strip()
+    target_date = args.date.strip() if args.date else None
     target_isins: Set[str] = set()
 
     if args.isin:
@@ -226,6 +226,23 @@ def main(args_list: Optional[List[str]] = None):
         else:
             console.print(f"[bold red]File not found: {args.file}[/bold red]")
             return
+
+    # Direct Master Database Lookup when date is not provided
+    if not target_date and args.isin and not args.compare:
+        from .service import FirdsService
+        svc = FirdsService()
+        console.print(f"[cyan]Querying ESMA master FIRDS database for ISIN '{args.isin}'...[/cyan]")
+        found_records = svc.lookup_isin_direct(args.isin, region=region, custom_dir=args.dltins_dir)
+        if found_records:
+            console.print(f"[bold green]Found {len(found_records)} instrument record(s) in FIRDS master register:[/bold green]\n")
+            for inst in found_records:
+                display_instrument_details(inst)
+            if args.export_json:
+                ReportExporter.export_instruments_json(found_records, args.export_json)
+                console.print(f"[green]Saved JSON export to {args.export_json}[/green]")
+        else:
+            console.print(f"[bold yellow]ISIN '{args.isin}' not found in FIRDS master register.[/bold yellow]")
+        return
 
     # 1. Resolve files for EU
     eu_files: List[Path] = []

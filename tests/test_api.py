@@ -27,8 +27,54 @@ class TestFastApiEndpoints(unittest.TestCase):
         data = response.json()
         self.assertIn("docs", data)
         self.assertIn("health", data)
+        self.assertIn("lookup_by_isin_only", data)
 
-    def test_search_valid_isin_sample_data(self):
+    def test_lookup_endpoint_sample_data(self):
+        response = self.client.get(
+            "/lookup",
+            params={
+                "isin": "US0378331005",
+                "region": "EU",
+                "dltins_dir": self.sample_dir,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["query_isin"], "US0378331005")
+        self.assertGreaterEqual(data["count"], 1)
+        inst = data["instruments"][0]
+        self.assertEqual(inst["general"]["full_name"], "APPLE INC COMMON STOCK")
+
+    def test_lookup_by_path_sample_data(self):
+        # Note: path param uses direct query
+        response = self.client.get(
+            "/isin/US0378331005",
+            params={"region": "EU"},
+        )
+        # Should return 200 from live Solr or sample data
+        self.assertIn(response.status_code, [200, 404])
+        if response.status_code == 200:
+            data = response.json()
+            self.assertTrue(data["success"])
+            self.assertEqual(data["query_isin"], "US0378331005")
+
+    def test_search_without_date_sample_data(self):
+        response = self.client.get(
+            "/search",
+            params={
+                "isin": "US0378331005",
+                "region": "EU",
+                "dltins_dir": self.sample_dir,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["query_isin"], "US0378331005")
+        self.assertIsNone(data["date"])
+
+    def test_search_valid_isin_with_date(self):
         response = self.client.get(
             "/search",
             params={

@@ -20,12 +20,78 @@ from .utils import get_cache_dir, logger
 class EsmaFirdsClient:
     """
     Client for ESMA FIRDS register API (Solr).
+    Supports both file download feed and direct database core queries by ISIN.
     """
-    SOLR_SELECT_URL = "https://registers.esma.europa.eu/solr/esma_registers_firds_files/select"
+    SOLR_FILES_URL = "https://registers.esma.europa.eu/solr/esma_registers_firds_files/select"
+    SOLR_FIRDS_CORE_URL = "https://registers.esma.europa.eu/solr/esma_registers_firds/select"
 
     def __init__(self, cache_dir: Optional[Path] = None, timeout: int = 30):
         self.cache_dir = cache_dir or get_cache_dir("eu")
         self.timeout = timeout
+
+    def lookup_isin_in_register(self, isin: str, rows: int = 50) -> List[Dict[str, Any]]:
+        """
+        Directly queries the ESMA FIRDS master register Solr core for an ISIN.
+        Returns detailed instrument records across all European trading venues.
+        """
+        if requests is None:
+            logger.warning("The 'requests' package is not installed.")
+            return []
+
+        clean_isin = isin.strip().upper()
+        params = {
+            "q": f"isin:{clean_isin}",
+            "wt": "json",
+            "rows": rows,
+            "sort": "publication_date desc",
+        }
+
+        headers = {
+            "User-Agent": "FIRDS-Data-Inspector/1.0",
+            "Accept": "application/json",
+        }
+
+        try:
+            logger.info(f"Querying ESMA master FIRDS database for ISIN '{clean_isin}'...")
+            response = requests.get(self.SOLR_FIRDS_CORE_URL, params=params, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+
+            data = response.json()
+            docs = data.get("response", {}).get("docs", [])
+            logger.info(f"Found {len(docs)} record(s) for ISIN '{clean_isin}' in ESMA database.")
+            return docs
+
+        except Exception as e:
+            logger.error(f"Failed to query ESMA master FIRDS database for {clean_isin}: {e}")
+            return []
+
+    def get_latest_firds_files(self, rows: int = 10) -> List[Dict[str, Any]]:
+        """
+        Retrieves the latest available DLTINS/FULINS files published by ESMA.
+        """
+        if requests is None:
+            return []
+
+        params = {
+            "q": "*",
+            "fq": "file_type:DLTINS",
+            "wt": "json",
+            "rows": rows,
+            "sort": "publication_date desc",
+        }
+
+        headers = {
+            "User-Agent": "FIRDS-Data-Inspector/1.0",
+            "Accept": "application/json",
+        }
+
+        try:
+            response = requests.get(self.SOLR_FILES_URL, params=params, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json().get("response", {}).get("docs", [])
+        except Exception as e:
+            logger.error(f"Failed to fetch latest FIRDS files from ESMA: {e}")
+            return []
 
     def search_dltins_files(self, date_str: str, file_type: str = "DLTINS") -> List[Dict[str, Any]]:
         """
@@ -58,7 +124,7 @@ class EsmaFirdsClient:
 
         try:
             logger.info(f"Querying ESMA Solr API for {file_type} files on {formatted_date}...")
-            response = requests.get(self.SOLR_SELECT_URL, params=params, headers=headers, timeout=self.timeout)
+            response = requests.get(self.SOLR_FILES_URL, params=params, headers=headers, timeout=self.timeout)
             response.raise_for_status()
 
             data = response.json()
